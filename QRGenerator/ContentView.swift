@@ -54,6 +54,62 @@ struct ContentView: View {
             )
         }
     }
+}
+
+// MARK: - private func
+
+private extension ContentView {
+    enum QRCodeGeneratorConst {
+        static let name = "CIQRCodeGenerator"
+        static let inputMessageKey = "inputMessage"
+        static let inputCorrectionLevelKey = "inputCorrectionLevel"
+    }
+    
+    /// 誤り訂正レベル
+    enum QRInputCorrectionLevel {
+        case low, medium, quartile, high
+        
+        var value: String {
+            switch self {
+            case .low:
+                return "L"
+            case .medium:
+                return "M"
+            case .quartile:
+                return "Q"
+            case .high:
+                return "H"
+            }
+        }
+    }
+    
+    func generateQRCode(
+        from string: String,
+        inputCorrectionLevel: QRInputCorrectionLevel = .high
+    ) -> UIImage? {
+        guard let filter = CIFilter(name: QRCodeGeneratorConst.name) else { return nil }
+
+        let data = string.data(using: .utf8)
+        filter.setValue(
+            data,
+            forKey: QRCodeGeneratorConst.inputMessageKey
+        )
+        filter.setValue(
+            inputCorrectionLevel.value,
+            forKey: QRCodeGeneratorConst.inputCorrectionLevelKey
+        )
+        
+        guard let ciImage = filter.outputImage else { return nil }
+
+        let scaleX = 10.0
+        let scaleY = 10.0
+        let transformedImage = ciImage.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
+
+        let context = CIContext()
+        guard let cgImage = context.createCGImage(transformedImage, from: transformedImage.extent) else { return nil }
+
+        return UIImage(cgImage: cgImage)
+    }
     
     func saveScreenAsImage() {
         let scenes = UIApplication.shared.connectedScenes
@@ -72,27 +128,6 @@ struct ContentView: View {
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
         saveError = nil
         showingSaveAlert = true
-    }
-}
-
-extension ContentView {
-    func generateQRCode(from string: String) -> UIImage? {
-        guard let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
-
-        let data = string.data(using: .utf8)
-        filter.setValue(data, forKey: "inputMessage")
-        filter.setValue("H", forKey: "inputCorrectionLevel")
-
-        guard let ciImage = filter.outputImage else { return nil }
-
-        let scaleX = 10.0
-        let scaleY = 10.0
-        let transformedImage = ciImage.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
-
-        let context = CIContext()
-        guard let cgImage = context.createCGImage(transformedImage, from: transformedImage.extent) else { return nil }
-
-        return UIImage(cgImage: cgImage)
     }
 }
 
